@@ -1,0 +1,6 @@
+VAR x;
+
+BEGIN
+    x := 10;
+    WRITELN(x)
+END.
