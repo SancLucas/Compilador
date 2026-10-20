@@ -1,0 +1,134 @@
+Compilador.
+	* El programa fuente está escrito en un pequeño lenguaje de programación 'PL/0'.
+	* Nuestro compilador  ||       ||     en C.
+		>> analizar y producir el código 'PL/0' para que luego pueda ejecutarse.
+
+¿Qué es un lenguaje de programación?
+	Conjunto de símbolos, palabras y reglas que permiten escribir programas.
+		>> sintaxis, semánntica, token, gramática, léxico, etc.
+
+=============================================================
+PL/0 >> análisis léxico >> a. sintáctico >> a. semántico >> generación de código >> ejecutable
+=============================================================
+
+* Léxico.
+	Se compone del conjunto de palabras, simbolos y signos que forman las unidades básicas de un lenguaje
+de programación. El compilador lee los coracteres y los agrupa/reconoce como unidades léxicas o tokens.
+
+	Ejemplo:
+		contador := 10;	| "contador" | identificador
+				|     " := "	    | asignación
+				|        10	    | número
+				|       ' ; '	    | punto y coma
+===========================================
+
+* Sintaxis.
+	Describe cómo deben estar organizados los elementos de un programa para que formen
+una construcción válida del lenguaje.
+
+	Ejemplo:
+ 		identificador := expresión;
+==============================
+
+* Semántica.
+	Se ocupa del significado del programa: qué representa cada construcción y si su uso
+tiene sentido dentro del lenguje.
+
+	Ejemplo: asignar un dato a un identificador que no fue declarado.
+===============================================
+
+Palabras reservadas.
+	Son palabras que tienen un significado especial para el lenguaje. No funcionan como
+nombres libres de variables o procedimientos.
+
+	Ejemplos: BEGIN, END, VAR, CONSTANTE, PROCEDURE, CALL, IF,
+		THEN, WHILE, DO, ODD, READLN, WRITE, WRITELN, ...
+=================================================
+
+Identificadores:
+========= son nombre definidos por el programador, por ejemplo, el nombre de una variable o procedimiento.
+
+Constantes:
+======= representa un valor que se declara con un nombre. Ejemplo: CONSTANTE limite = 10;
+
+Variables:
+======	indica una posición o espacio en donde puede almacenarse un valor, con la posibilidad de modificarlo
+durante la ejecución. Ejemplo: VAR contador, suma;
+
+
+Asignación:
+======= permite guardar el resultado de una expresión en una variable. Ejemplo: contador := contador+1;
+
+Expresiones y operadores:
+================ combina valores, identificadores y operadores para producir un resultado.
+>> suma [+]	>> resta [-]	>> multiplicación [*]	>> división [/]	>> paréntesis [( )]
+
+	[No todos los operadores tienen la misma prioridad]
+expresión >> términos >> factores ================
+				- 2 + 3 * 4
+				- (2 + 3) * 4
+
+Condicionales / "simbolos":
+========= mayor [>] ; menor [<] ; igual [=] ; distinto [#] ; mayor o igual [>=] ; menor o igual [<=] ; ODD [impar]
+
+=====================
+=======================
+
+IF [condición] THEN [proposición]
+WHILE [  ||  ] DO [          ||           ]
+
+BEGIN
+         proposición 1;
+        proposición 2
+END
+
+Procedimientos.
+	PROCEDURE saludar;
+	BEGIN
+	       WRITELN('Hola')
+	END
+
+	CALL saludar;
+
+=======================
+=====================
+
+VAR contador;				// palabra reservada | identificador | punto y coma
+BEGIN					// palabra reservada
+         contador := 0;				// identificador | asignación | valor | punto y coma
+         WHILE contador < 5 DO			// palabra reservada | identificador | condicional | valor | palabra reservada
+	BEGIN				//      ||             ||
+	         WRITELN(contador);		//      ||             ||	| operador | identificador | operador | punto y coma 
+	         contador := contador + 1		// identificador | asignación | identificador | operador | valor
+	END				// palabra reservada
+END					//      ||             ||
+
+=====================
+=======================
+
+Análisis léxico >> alex( )	// función en C que reconoce unidades léxicas.
+
+a. sintáctico >> programa( )
+	    >> bloque( )
+	    >> proposición( )
+	    >> expresión( )
+	    >> término( )
+	    >> factor( )
+
+a. semántico >> tabla de símbolos
+
+================================================================================
+================================================================================
+
+Símbolos no terminales = <expresión>	// representan abstracciones que se
+										pueden descomponer en otras reglas.
+
+Símbolos terminales = "+", 5, ó "if"	// son caracteres o palabras literales
+										del lenguaje, a veces escritos entre "".
+
+Operador ::=	// "se define como..."
+   ||     |:	// opción alternativa lógica ("ó").
+
+================
+CONST 	=
+VAR 	:=

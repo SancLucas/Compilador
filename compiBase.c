@@ -14,8 +14,8 @@ typedef unsigned char byte;
 typedef enum {ASIGNACION, NULO, FIN_DE_ARCHIVO, BEGIN, END,
 ABREPAREN, MAYOR, MENOR, IGUAL, DISTINTO, MAYORIGUAL, MENORIGUAL,
 CIERRAPAREN, READLN, WRITE, WRITELN, VAR, CADENA, IDENT, NUMERO,
-PUNTO, COMA, PTOCOMA, MAS, CONSTANTE, PROCEDURE, CALL, IF, THEN,
-WHILE, DO, ODD, MENOS, BARRA, ASTERISCO} tTerminal;
+PUNTO, COMA, PTOCOMA, MAS, CONSTANTE, PROCEDURE, CALL, IF, ELSE,
+THEN, WHILE, DO, ODD, MENOS, BARRA, ASTERISCO} tTerminal;
 
 typedef struct {
     tTerminal tipo;
@@ -125,9 +125,9 @@ tSimbolo aLex(FILE* fp) {
             else if (strcmp(cadenaAux, "WRITE") == 0) a.simbolo = WRITE;
             else if (strcmp(cadenaAux, "WRITELN") == 0) a.simbolo = WRITELN;
             else if (strcmp(cadenaAux, "CALL") == 0) a.simbolo = CALL;
-            else if (strcmp(cadenaAux, "NUMERO") == 0) a.simbolo = NUMERO;
             else if (strcmp(cadenaAux, "PROCEDURE") == 0) a.simbolo = PROCEDURE;
             else if (strcmp(cadenaAux, "IF") == 0) a.simbolo = IF;
+            else if (strcmp(cadenaAux, "ELSE") == 0) a.simbolo = ELSE;
             else if (strcmp(cadenaAux, "THEN") == 0) a.simbolo = THEN;
             else if (strcmp(cadenaAux, "WHILE") == 0) a.simbolo = WHILE;
             else if (strcmp(cadenaAux, "DO") == 0) a.simbolo = DO;
@@ -241,6 +241,8 @@ void imprimir(tSimbolo simb) {
         case BEGIN: printf("BEGIN");
             break;
         case IF: printf("IF");
+            break;
+        case ELSE: printf("ELSE");
             break;
         case THEN: printf("THEN");
             break;
@@ -629,7 +631,12 @@ tSimbolo proposicion(tSimbolo s, FILE *arch, tablaDeIdent tabla, int posUltimoId
         else
             error(8,s.cadena); //E8 Falta THEN
         s = proposicion(s,arch, tabla, posUltimoIdent, memoria, topememoria);
-        int distancia=*topememoria-origen;
+        s=aLex(arch);
+        if (s.simbolo==ELSE){
+            s=aLex(arch);
+            s = proposicion(s,arch, tabla, posUltimoIdent, memoria, topememoria);
+        }   //ver como hacer que funcione solo si el IF no actua.
+        int distancia=*topememoria-origen;  //ver si hace falta corregir.
         CargarIntEnMem(memoria,origen-4,distancia);
         break;
     case WHILE:

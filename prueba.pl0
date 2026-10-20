@@ -1,6 +1,9 @@
 VAR x;
 
 BEGIN
-    x := 10;
-    WRITELN(x)
+    x := 1;
+    IF x=1 THEN
+        WRITELN(x);
+    ELSE
+        WRITELN('hola');
 END.
