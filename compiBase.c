@@ -1,49 +1,64 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>   /* Para usar isgraph, etc. */
-#include <string.h>  /* Para usar strlen, etc. */
+/*** LIBRERÍAS ***/
+#include <stdio.h> // Permite usar funciones de entrada y salida, como printf, getc, fopen, fclose y fwrite.
+#include <stdlib.h> // Transforma cadenas de texto en números mediante funciones como atoi, atol, strtod y strtol.
+#include <ctype.h> // Permite clasificar caracteres. 
+// Por ejemplo, isalpha(c) pregunta si un carácter es una letra, isdigit(c) si es un dígito e isgraph(c) si es un carácter imprimible que no es un espacio en blanco.
+#include <string.h> // Permite manipular cadenas de caracteres con funciones como strlen, strcpy, strcmp, strcat y strrchr.
 
 /*** CONSTANTES ***/
-#define MAX_CANTIDAD_IDENT 1024
-#define MAX_LONGITUD_CADENA 128  /* es a longitud neta, sin los ap�strofos ni el cero final */
-#define MEM 8192
+#define MAX_CANTIDAD_IDENT 1024 // Hay espacio para un máximo de 1024 entradas: nombres de variables, constantes y procedimientos.
+#define MAX_LONGITUD_CADENA 128  // Es la longitud neta, sin los apóstrofos ni el cero final.
+// El número 128 proviene del sistema ASCII original, que utiliza 7 bits para representar cada carácter (2⁷ = 128).
+#define MEM 8192 // MEM determina la capacidad del arreglo memoria: 8192 elementos de tipo byte.
+// Como byte se define después como unsigned char, en esta implementación cada elemento ocupa un byte.
+// Kibibyte (KiB): son 1.024 bytes (2¹⁰ bytes). Entonces: 8192 bytes = 8 KiB.
+
 /*** NUEVOS TIPOS ***/
+// Una declaración typedef es una declaración con typedef como clase de almacenamiento. 
+// El declarador se convierte en un nuevo tipo. 
+// Puede utilizar declaraciones typedef para construir nombres más cortos o más significativos para tipos ya definidos por C o para tipos que haya declarado.
+// Los nombres de typedef permiten encapsular detalles de la implementación que pueden cambiar.
+// Una declaración typedef se interpreta igual que una declaración de variable o de función, pero el identificador, en lugar de suponer el tipo especificado por la declaración, se convierte en un sinónimo del tipo.
+// En ocasiones puede ser útil definir nombres para tipos de datos, 'alias' que nos hagan más fácil declarar variables y parámetros.
 
-typedef unsigned char byte;
+typedef unsigned char byte; // Será un tipo equivalente a 8 bits, sus valores van de 0 a 255.
+// unsigned indica que el tipo representa valores sin signo.
+// Cada posición de memoria ocupada tendrá una instrucción en hexa que ocupa un byte.
 
+// Un enum es un conjunto de constantes enteras con nombre.
 typedef enum {ASIGNACION, NULO, FIN_DE_ARCHIVO, BEGIN, END,
 ABREPAREN, MAYOR, MENOR, IGUAL, DISTINTO, MAYORIGUAL, MENORIGUAL,
 CIERRAPAREN, READLN, WRITE, WRITELN, VAR, CADENA, IDENT, NUMERO,
-PUNTO, COMA, PTOCOMA, MAS, CONSTANTE, PROCEDURE, CALL, IF, ELSE,
-THEN, WHILE, DO, ODD, MENOS, BARRA, ASTERISCO} tTerminal;
+PUNTO, COMA, PTOCOMA, MAS, CONSTANTE, PROCEDURE, CALL, IF, THEN,
+WHILE, DO, ODD, MENOS, BARRA, ASTERISCO} tTerminal; // En este caso se usa para representar todos los términos de los simbolos terminales.
+// Es decir las palabras reservadas, numeros, identificadores, simbolos, indicación de fin de archivo y nulo.
 
-typedef struct {
-    tTerminal tipo;
-   char nombre [MAX_LONGITUD_CADENA+3];
-    int valor;
-} tEntradaTabla;
+typedef struct { // Define un nuevo tipo partiendo de una estructura.
+    tTerminal tipo; // Si el identificador es una constante, una variable o un procedimiento.
+    char nombre [MAX_LONGITUD_CADENA+3]; // El nombre del identificador más los apóstrofos y el cero final.
+    int valor; // Constante: guarda el valor numérico de la constante.
+               // Variable: guarda su posición de almacenamiento, utilizada para calcular dónde está su valor en memoria.
+               // Procedimiento: guarda la posición en la que comienza su código generado.
+} tEntradaTabla; // Representa un identificador.
 
-typedef struct {
-    tTerminal simbolo;
-    char cadena[MAX_LONGITUD_CADENA + 3];  /* m�s los ap�strofos y el cero final */
-} tSimbolo;
+typedef struct { // Define un nuevo tipo partiendo de una estructura.
+    tTerminal simbolo; // simbolo guarda el tipo de terminal que es.
+    char cadena[MAX_LONGITUD_CADENA + 3];  // cadena es el token leido más los apóstrofos y el cero final.
+} tSimbolo; // Representa un simbolo terminal.
 
-typedef tEntradaTabla tablaDeIdent[MAX_CANTIDAD_IDENT];
+typedef tEntradaTabla tablaDeIdent[MAX_CANTIDAD_IDENT]; // Representa el espacio de memoria reservado para identificadores.
+// MAX_CANTIDAD_IDENT vale 1024, por lo que tablaDeIdent es un arreglo de hasta 1024 entradas.
 
 /*** NUEVAS FUNCIONES (PROTOTIPOS) ***/
-
-tSimbolo aLex(FILE*);
+// Son prototipos o etiquetas: le informan al compilador el nombre, el tipo de retorno y los parámetros de cada función antes de que aparezca su implementación.
+tSimbolo aLex(FILE*); // Analizador léxico.
 
 void imprimir(tSimbolo);
-
 void concatenar(char*, char);
-
+void uppercase(char*);
 void error (int, char *);
 
-void uppercase(char*);
-
-int buscarIdent (char *, tablaDeIdent, int, int);
-
+// Análisis sintáctico y semántico.
 tSimbolo programa (tSimbolo, FILE *, byte[], int *);
 tSimbolo bloque (tSimbolo, FILE *, tablaDeIdent, int, byte[], int *, int *);
 tSimbolo proposicion (tSimbolo, FILE *, tablaDeIdent, int, byte[], int *);
@@ -51,73 +66,100 @@ tSimbolo condicion (tSimbolo, FILE *, tablaDeIdent, int, byte[], int *);
 tSimbolo expresion (tSimbolo, FILE *, tablaDeIdent, int, byte[], int *);
 tSimbolo termino (tSimbolo, FILE *, tablaDeIdent, int, byte[], int *);
 tSimbolo factor (tSimbolo, FILE *, tablaDeIdent, int, byte[], int *);
+
+int buscarIdent (char *, tablaDeIdent, int, int);
+void inicializarMemoria (byte[], int *);
+
+void Crear (byte[], int, char *);
 void CargarInt (byte[] , int *, int);
 void CargarIntEnMem (byte[], int , int);
-void inicializarMemoria (byte[], int *);
-void Crear (byte[], int, char *);
+int leerIntDeMem (byte[], int);
 void CargarByte(byte[],int *,byte);
 void CargarByteEnMem (byte[], int, byte);
-int leerIntDeMem (byte[], int);
 byte leerByte (byte[], int );
 void cargarPopEAX(byte[], int*);
-/*** MAIN ***/
 
+/*** MAIN ***/
+// argc y argv son los parámetros que el sistema operativo le entrega al programa cuando se ejecuta desde la línea de comandos.
+// argc: cantidad de argumentos recibidos.
+// argv: arreglo de cadenas de caracteres, con un texto por argumento.
+// El nombre del ejecutable también cuenta como argumento.
+// Por eso, si ejecutás el compilador así: compiBase.exe ejemplo.pl0
+// Los argumentos son: argc = 2, argv[0] = "compiBase.exe", argv[1] = "ejemplo.pl0".
+// argv[0] suele contener el nombre o la ruta con la que se ejecutó el compilador.
+// argv[1] contiene el nombre del archivo fuente que se quiere procesar.
 int main(int argc, char* argv[]) {
-    byte memoria[MEM];
-    int topememoria=0;
-    inicializarMemoria(memoria, &topememoria);
-    //CargarInt(memoria,&topememoria,-2);
-    if (argc != 2) {
-        printf("Uso: lexer FUENTE.PL0\n");
+    byte memoria[MEM]; // Crea la variable memoria de tipo array de byte, su índice válido va de 0 a 8191.
+    // Sirve para ir poniendo todas las intrucciones de lenguaje de máquina en el array.
+    int topememoria=0; // Inicializa topememoria en 0; va a servir para saber hasta donde ocupé el array.
+    // Representa la posición en la que se agregaría el próximo byte del código generado.
+    // Al comenzar vale cero, por lo que el primer byte se escribiría en memoria[0].
+    // No es el índice del último byte escrito, sino la posición siguiente.
+    inicializarMemoria(memoria, &topememoria); // LLama a la función, esta tiene todo el encabezado que figura en la documentación.
+    // La función recibe:
+    // memoria: el arreglo donde se va a construir el código.
+    // &topememoria: la dirección de la variable topememoria (puntero) puede modificar el contador original.
+    if (argc != 2) { // El programa espera exactamente dos argumentos: el nombre del propio compilador y un archivo fuente.
+        printf("Uso: lexer FUENTE.PL0\n"); // Le muestra al usuario que debe proporcionar un archivo fuente.
     }
-    else {
-        FILE* archivo;
-        archivo = fopen(argv[1], "r");
-        if (archivo == NULL) {
+    else { // Sino entonces los argumentos están bien.
+        FILE* archivo; // Declara un puntero que representa el archivo abierto.
+        archivo = fopen(argv[1], "r"); // Intenta abrir el archivo en modo lectura.
+        if (archivo == NULL) { // Si la apertura falla, fopen devuelve NULL.
             printf("Error de apertura del archivo [%s].\n", argv[1]);
-        } else {
-            tSimbolo s;
-            //do { //falso analisis sintactico
-            s = aLex(archivo);
-            s = programa (s, archivo, memoria, &topememoria);
-            if (s.simbolo==FIN_DE_ARCHIVO)
-                printf("GOOD JOB!! El programa estaba bien");
-            else
+        } else { // Si no, entonces apertura exitosa.
+            tSimbolo s; // Declara s, que almacena un símbolo terminal.
+            s = aLex(archivo); // LLama al analizador léxico, lee el primer símbolo del archivo fuente.
+            s = programa (s, archivo, memoria, &topememoria); // Llama al análisis del programa completo. Se le pasa el símbolo actual, el archivo, el arreglo que recibirá el código generado y la dirección del contador (puede modificar topememoria).
+            if (s.simbolo==FIN_DE_ARCHIVO) // Comprueba si el símbolo devuelto indica el fin del archivo.
+                printf("GOOD JOB!! El programa estaba bien"); // Muestra el mensaje de éxito.
+            else // Si no, llama a la función de error.
                 error(0, s.cadena);
-                //imprimir(s);
-            //} while(s.simbolo != FIN_DE_ARCHIVO);
-            fclose(archivo);
+            fclose(archivo); // Cierra el archivo fuente que se había abierto.
         }
-    Crear(memoria,topememoria,argv[1]);
+    Crear(memoria,topememoria,argv[1]); // Llama a la función Crear, escribe los bytes generados en el archivo binario.
+    // Crear recibe:
+    // memoria: el arreglo que contiene los bytes generados.
+    // topememoria: la cantidad de bytes que se escribieron.
+    // argv[1]: el nombre del archivo fuente, que la función usa para construir el nombre del archivo de salida.
+    // La implementación también modifica el nombre recibido para cambiar su extensión a .exe.
     }
     return 0;
-
 }
 
 /*** NUEVAS FUNCIONES (DEFINICIONES) ***/
+// Esta función es el analizador léxico, el objetivo es ir leyendo y cortando los caracteres del archivo e asignarles un tTerminal (tokenizar).
+tSimbolo aLex(FILE* fp) { // Recibe el puntero al archivo prueba.pl0.
+    tSimbolo a; // Declara un tSimbolo.
+    a.cadena[0] = '\0'; // Inicializa la cadena como vacía (\0 es el carácter nulo y se utiliza para marcar el final de una cadena de texto).
+    char c; // Declara un char.
+    do { // Este bloque lee el archivo hasta encontrar algo.
+        c = getc(fp); // Lee un caracter del archivo.
+    } while (c != EOF && !isgraph(c));  /* corta cuando c==EOF o cuando isgraph(c)==true */ 
+    //La función isgraph() en C verifica si un carácter tiene representación gráfica (es imprimible y no es un espacio en blanco).
 
-tSimbolo aLex(FILE* fp) {
-    tSimbolo a;
-    a.cadena[0] = '\0';
-    char c;
-    do {
-        c = getc(fp);
-    } while (c != EOF && !isgraph(c));  /* corta cuando c==EOF o cuando isgraph(c)==true */
-
-    if (c == EOF){
-        a.simbolo = FIN_DE_ARCHIVO;
-    } else {
-        concatenar(a.cadena, c);
-        if (isalpha(c)) {
-            do {
-                c = getc(fp);
-                if (isalpha(c) || isdigit(c)) concatenar(a.cadena, c);
-            } while (c != EOF && (isalpha(c) || isdigit(c))); /* corta cuando c==EOF o cuando c no es letra ni d�gito */
-            ungetc(c, fp); /* el char que provoc� el fin de la cadena debe volver a leerse en el pr�ximo llamado a aLex */
-            char cadenaAux[MAX_LONGITUD_CADENA + 3];  /* m�s los ap�strofos y el cero final */
-            strcpy(cadenaAux, a.cadena);
-            uppercase(cadenaAux);
-            if (strcmp(cadenaAux, "BEGIN") == 0) a.simbolo = BEGIN;
+    if (c == EOF){ // Si leyó un END OF FILE.
+        a.simbolo = FIN_DE_ARCHIVO; // Se le asigna como simbolo el tTerminal FIN_DE_ARCHIVO.
+    } else { // Sino significa que era un caracter imprimible...
+        concatenar(a.cadena, c); // Concatena el caracter a la cadena, así va armando el token.
+        if (isalpha(c)) { // Verifica si el carácter contiene únicamente letras.
+            do { // Este bloque lee hasta encontrar algo que no sea letra o número (porque el token puede ser alphanumérico).
+                c = getc(fp); 
+                if (isalpha(c) || isdigit(c)) concatenar(a.cadena, c); // Si es un número o letra lo concatena y sigue leyendo.
+            } while (c != EOF && (isalpha(c) || isdigit(c))); // Corta cuando c==EOF o cuando c no es letra ni dígito.
+            ungetc(c, fp); // El char que provocó el fin de la cadena debe volver a leerse en el próximo llamado a aLex.
+            // La función ungetc() en C sirve para devolver un carácter (un "empuje hacia atrás") a un flujo de entrada (FILE *stream), de modo que sea el próximo en leerse.
+            // Se podría decir que el puntero retrocede una posición en la lectura del archivo.
+            
+            // Declara una cadena auxiliar.
+            char cadenaAux[MAX_LONGITUD_CADENA + 3];  // Más los apóstrofos y el cero final.
+            // Se reserva espacio para la longitud máxima, los dos apóstrofos y el cero final.
+            // Contenido de la cadena: 128, Apóstrofo de apertura: 1, Apóstrofo de cierre: 1, Terminador '\0': 1, Total: 131.
+            // Por eso, MAX_LONGITUD_CADENA + 3 permite reservar 131 posiciones para cadenaAux.
+            strcpy(cadenaAux, a.cadena); // Copia la cadena que acaba de tokenizar a la auxiliar.
+            uppercase(cadenaAux); // La pasa a mayúsculas.
+            // En todos los casos se compara la cadena auxiliar con las palabras reservadas del código y si coinciden se le asigna el tTerminal correspondiente.
+            if (strcmp(cadenaAux, "BEGIN") == 0) a.simbolo = BEGIN; // El strcmp da 0 si las cadenas son iguales.
             else if (strcmp(cadenaAux, "END") == 0) a.simbolo = END;
             else if (strcmp(cadenaAux, "READLN") == 0) a.simbolo = READLN;
             else if (strcmp(cadenaAux, "VAR") == 0) a.simbolo = VAR;
@@ -125,32 +167,37 @@ tSimbolo aLex(FILE* fp) {
             else if (strcmp(cadenaAux, "WRITE") == 0) a.simbolo = WRITE;
             else if (strcmp(cadenaAux, "WRITELN") == 0) a.simbolo = WRITELN;
             else if (strcmp(cadenaAux, "CALL") == 0) a.simbolo = CALL;
+            else if (strcmp(cadenaAux, "NUMERO") == 0) a.simbolo = NUMERO; // Esta linea me parece que está totalmente de más
             else if (strcmp(cadenaAux, "PROCEDURE") == 0) a.simbolo = PROCEDURE;
             else if (strcmp(cadenaAux, "IF") == 0) a.simbolo = IF;
-            else if (strcmp(cadenaAux, "ELSE") == 0) a.simbolo = ELSE;
             else if (strcmp(cadenaAux, "THEN") == 0) a.simbolo = THEN;
             else if (strcmp(cadenaAux, "WHILE") == 0) a.simbolo = WHILE;
             else if (strcmp(cadenaAux, "DO") == 0) a.simbolo = DO;
             else if (strcmp(cadenaAux, "ODD") == 0) a.simbolo = ODD;
-            else a.simbolo = IDENT;
-        } else if (isdigit(c)) {
-            do {
+            else a.simbolo = IDENT; // En caso que no sea ninguna palabra reservada entonces es un identificador de variable o procedimiento.
+        } else if (isdigit(c)) { // Si no es una letra, entonces comprueba si el carácter es un dígito numérico (del 0 al 9).
+            do { // Este bloque lee hasta encontrar algo que no sea número.
                 c = getc(fp);
-                if (isdigit(c)) concatenar(a.cadena, c);
-            } while (c != EOF && isdigit(c)); /* corta cuando c==EOF o cuando c no es d�gito */
-            ungetc(c, fp); /* el char que provoc� el fin de la cadena debe volver a leerse en el pr�ximo llamado a aLex */
-            a.simbolo = NUMERO;
-        } else switch (c) {
-            case '\'':
-                do {
+                    if (isdigit(c)) concatenar(a.cadena, c); // Si es un número, lo concatena y sigue leyendo.
+            } while (c != EOF && isdigit(c)); // Corta cuando c==EOF o cuando c no es dígito.
+            ungetc(c, fp); // El char que provocó el fin de la cadena debe volver a leerse en el próximo llamado a aLex.
+            a.simbolo = NUMERO; // Termina de armar el token numérico y le asigna al simbolo el tTerminal NUMERO.
+        } else switch (c) { // Si no era letra ni número, entonces entra al switch de los posibles símbolos.
+            // En C, la barra invertida \ sirve para representar caracteres especiales dentro de una constante de carácter o una cadena.
+            // La barra invertida no es el carácter que se está buscando: es un mecanismo de escape para que C interprete correctamente el apóstrofo, sin confundirlo con el que delimita la constante de carácter.
+            // Esto sirve por ejemplo, si el programa tiene: WRITE('Hola mundo') para poder leer la cadena.
+            case '\'': // Este caso es si el caracter es apóstrofo.
+                do { // Este bloque lee desde el comienzo de un apóstrofo hasta el cierre de otro.
                     c = getc(fp);
-                    if (c != EOF && c != '\n') concatenar(a.cadena, c);
-                } while (c != EOF && c != '\n' && c != '\''); /* corta cuando c==EOF o c=='\n' o cuando c es un ap�strofo */
-                if (c == EOF || c == '\n') {
-                    a.simbolo = NULO;
-                    ungetc(c, fp);
-                } else a.simbolo = CADENA;
+                    if (c != EOF && c != '\n') concatenar(a.cadena, c); // Si no es fin de archivo o salto de línea lo concatena.
+                } while (c != EOF && c != '\n' && c != '\''); // Corta cuando c==EOF o c=='\n' o cuando c es un apóstrofo.
+                // Porque si es un apóstrofo estaríamos ante el cierre.
+                if (c == EOF || c == '\n') { // Si cortó el while porque se encontró con un fin de archivo o un \n.
+                    a.simbolo = NULO; // Le asigna el tTerminal NULO.
+                    ungetc(c, fp); 
+                } else a.simbolo = CADENA; // Si el while se cortó porque llegó al cierre del apóstrofo, entonces le asigna el tTerminal CADENA a todo lo leido.
                 break;
+            // El resto de los casos según el símbolo del caracter se le asigna el tTerminal correspondiente.    
             case '.': a.simbolo = PUNTO;
                 break;
             case ',': a.simbolo = COMA;
@@ -163,21 +210,22 @@ tSimbolo aLex(FILE* fp) {
                 break;
             case ')': a.simbolo = CIERRAPAREN;
                 break;
-            case '<':
-                c = getc(fp);
-                switch(c){
-                    case '=': a.simbolo = MENORIGUAL;
-                        concatenar(a.cadena, c);
+            case '<': // En el caso del menor quiero seguir leyendo a ver que le sigue.
+                c = getc(fp); 
+                switch(c){ 
+                    case '=': a.simbolo = MENORIGUAL; // Si sigue un = entonces el token es <=.
+                        concatenar(a.cadena, c); // Lo concatena.
                         break;
-                    case '>': a.simbolo = DISTINTO;
-                        concatenar(a.cadena, c);
+                    case '>': a.simbolo = DISTINTO; // Si sigue un > entonces el token es <>.
+                        concatenar(a.cadena, c); // Lo concatena.
                         break;
-                    default: a.simbolo = MENOR;
-                        ungetc(c, fp);
+                    default: a.simbolo = MENOR; // Si no, era cualquier otro símbolo, me quedo con el < solo.
+                        ungetc(c, fp); // Lo deslee.
                         break;
                 }
                 break;
-            case '>':
+            // Antes usa switch porque eran más de dos opciones, ahora usa if porque son sólo dos pero es lo mismo.
+            case '>': // Acá se repite la lógica que en el caso del menor, pero el distinto ya no hay que tenerlo en cuenta.
                 c = getc(fp);
                 if (c=='=')
                 {
@@ -190,14 +238,14 @@ tSimbolo aLex(FILE* fp) {
                     ungetc(c, fp);
                 }
                 break;
-            case ':':
+            case ':': // En el caso de : sí o sí debe estar seguido de =.
                 c = getc(fp);
                 if (c=='=')
                 {
                     a.simbolo = ASIGNACION;
                     concatenar(a.cadena, c);
                 }
-                else
+                else // Si no, es un token inválido y se le asigna el tTerminal NULO.
                 {
                     a.simbolo = NULO;
                     ungetc(c, fp);
@@ -211,16 +259,15 @@ tSimbolo aLex(FILE* fp) {
                 break;
             case '*': a.simbolo = ASTERISCO;
                 break;
-            default:
+            default: // Cualquier otro símbolo que no sea los analizados será error 18.
                 error(18,a.cadena);
         }
     }
-    imprimir(a);
-    //printf("%s",a.cadena);
-    return a;
+    imprimir(a); // Llama a la función imprimir mandando el simbolo completo (cadena y simbolo terminal).
+    return a; // Retorna el simbolo.
 }
 
-void imprimir(tSimbolo simb) {
+void imprimir(tSimbolo simb) { // La función imprimir muestra lo que se acaba de tokenizar y qué tTerminal se le asignó.
     char j;
     printf("Cadena leida: \"%s\"\t Simbolo correspondiente: ", simb.cadena);
     switch(simb.simbolo){
@@ -241,8 +288,6 @@ void imprimir(tSimbolo simb) {
         case BEGIN: printf("BEGIN");
             break;
         case IF: printf("IF");
-            break;
-        case ELSE: printf("ELSE");
             break;
         case THEN: printf("THEN");
             break;
@@ -295,22 +340,40 @@ void imprimir(tSimbolo simb) {
     }
     printf ("\n");
 }
-
-void concatenar(char* s, char c) {
-    if (strlen(s) < MAX_LONGITUD_CADENA + 2){  /* si cabe uno m�s */
-        for (; *s; s++);
-        *s++ = c;
-        *s++ = '\0';
+ 
+void concatenar(char* s, char c) { // char* s es un puntero a char. En esta función se espera que apunte al comienzo de una cadena de caracteres terminada en '\0'.
+    // Este if sirve como chequeo para evitar desbordamiento.
+    if (strlen(s) < MAX_LONGITUD_CADENA + 2){  // La función permite que la cadena llegue a tener hasta 130 caracteres visibles o almacenados antes del terminador.
+        // El for hace avanzar el puntero hasta el fin de línea.
+        for (; *s; s++); // En este caso:
+                         // Inicialización: está vacía. El puntero s ya apunta al comienzo de la cadena.
+                         // Condición: *s. Se interpreta como verdadero mientras el carácter apuntado no sea '\0'.
+                         // Actualización: s++. Avanza el puntero una posición.
+                         // Cuerpo: está vacío, porque después del for hay un punto y coma.                  
+        *s++ = c; // En el fin de línea escribe el nuevo caracter y luego avanza uno el puntero.
+        *s++ = '\0'; // Escribe el fin de línea y luego avanza uno el puntero.
     }
+    // También podría escribirse así:
+    /* void concatenar(char* s, char c) {
+        if (strlen(s) < MAX_LONGITUD_CADENA + 2) {
+            while (*s != '\0') {
+                s++;
+            }
+
+            *s = c;
+            s++;
+            *s = '\0';
+        }
+    }*/
 }
 
 void uppercase(char* s) {
-    for (; *s; s++)
-        *s = toupper(*s);
+    for (; *s; s++) // Recorre toda la cadena hasta el fin de línea.
+        *s = toupper(*s); // Convierte un carácter en minúscula a su letra mayúscula correspondiente.
 }
 
 void error(int n, char *s) {
-    printf("\nERROR: ");
+    printf("\nERROR: "); // Muestra el mensaje de error que corresponde asociado a un número de error.
     switch(n)
     {
     case 0:
@@ -370,88 +433,144 @@ void error(int n, char *s) {
     default:
         printf(" %d \n",n);
     }
-    exit(1);
+    exit(1); // Sirve para terminar el programa de forma inmediata y devolver un código de estado de error al sistema operativo.
 }
-
+ 
 tSimbolo programa (tSimbolo s, FILE *arch, byte memoria[], int *topememoria) {
-    tablaDeIdent tabla;
-    int distanciaFin;
-    int d, i;
-    int fileAligment,sectionAligment,sizeOfCodeSection,sizeOfRawData;
-    int posicionVar=0;
-    memoria[(*topememoria)++]= 0xBF;    ///MOV EDI
-    CargarInt(memoria, topememoria, 0);
+    // La función devuelve un tSimbolo, es decir, devuelve información sobre un símbolo del lenguaje fuente.
+    // Recibe cuatro parámetros:
+    // s: el símbolo que ya fue leído del archivo. Es el punto desde el que continúa el análisis.
+    // arch: un puntero al archivo fuente abierto. Se usa para seguir leyendo símbolos.
+    // memoria[]: el arreglo de bytes donde se construye el ejecutable. 
+    // Estamos recibiendo el arreglo completo, osea que la función trabaja sobre el original, no sobre una copia.
+    // topememoria: un puntero al contador de bytes generados.
+    
+    tablaDeIdent tabla; // Crea una tabla para los identificadores.
+    int distanciaFin; // Declara un entero para calcular el desplazamiento en un salto relativo.
+    int d, i; // d se usa en el cálculo del valor que se escribe en la posición 1793 de memoria.
+            // i se usa como contador en el for.
+    int fileAligment, sectionAligment, sizeOfCodeSection, sizeOfRawData; // Declara variables para alineación del archivo, calcular valores alineados que se escriben en el encabezado y valores de tamaño.
+    int posicionVar=0; // Inicializa posicionVar en 0, esto va a ir contando la cantidad variables declaradas.
+    // topememoria luego de haber llamado a inicializarMemoria en el main termina con 1792 asignado.
+    // (*topememoria)++ usa el valor actual como índice del array y luego incrementa.
+    memoria[(*topememoria)++]= 0xBF; // Asigna 0xBF al array. Es decir hace un MOV EDI.
+    CargarInt(memoria, topememoria, 0); // Carga el entero 0. Es decir hace un MOV EDI, 0.
 
-    s = bloque(s, arch, tabla, 0, memoria, &*topememoria, &posicionVar);
-    if (s.simbolo==PUNTO){
-        s=aLex(arch);
-        distanciaFin=0x588-(*topememoria+5);
-        CargarByte(memoria,topememoria,0xE9);
-        CargarInt(memoria,topememoria,distanciaFin);
+    s = bloque(s, arch, tabla, 0, memoria, &*topememoria, &posicionVar); // Llama a la función bloque.
+    // Cuando bloque termina, topememoria ya refleja cuánto se agregó, y entonces se puede calcular la ubicación de los datos.
+    if (s.simbolo==PUNTO){ // Espera un punto después del bloque.
+        s=aLex(arch); // Lee el siguiente token (debería ser FIN DE ARCHIVO).
 
-        d=leerIntDeMem(memoria,212)+leerIntDeMem(memoria,204);///Ajusto el valor de Mov EDI
-        CargarIntEnMem(memoria,1793,(d+*topememoria-0x200));
+        // Instrucción de salto relativo a 1416 - posición actual.
+        distanciaFin=0x588-(*topememoria+5); // La fórmula está calculando una distancia relativa para que el salto llegue a la dirección representada por 0x588 (1416 en decimal). 
+        // Como va a realizar un salto relativo, la distancia se interpreta respecto de la dirección de la instrucción siguiente al salto, no respecto del byte donde comienza el E9.
+        // topememoria + 5 es porque quiero mover 5 bytes por la instruccion JMP dir.
+        // Son 1 byte para el E9 y 4 bytes más para la dirección.
+        CargarByte(memoria,topememoria,0xE9); // Realiza un salto relativo, JMP dir. 
+        CargarInt(memoria,topememoria,distanciaFin); // Carga el entero distanciaFin. Es decir hace JMP distanciaFin.
+        // Donde distanciaFin es 0x588-(*topememoria+5).
+        // (*topememoria+5) son el byte que ocupa CargarByte + los 4 bytes que ocupa CargarInt.
+        // Es decir hace un JMP 0x588, que es la posición 1416, menos la posición actual.
 
-        for(i=0;i<posicionVar;i++){
-            CargarInt(memoria,topememoria,0);
+        // Completa el valor de MOV EDI.
+        d=leerIntDeMem(memoria,212)+leerIntDeMem(memoria,204); // Guarda en d la suma de los valores de las posiciones 212 y 204.
+        // leerIntDeMem(memoria, 212) lee un entero de cuatro bytes a partir de la posición 212 de la plantilla binaria.
+        // leerIntDeMem(memoria, 204) hace lo mismo, pero a partir de la posición 204.
+        // El programa suma ambos valores y guarda el resultado en d.
+        // Calcula la dirección donde estarán los valores de las variables y la escribe como valor inmediato de MOV EDI.
+        CargarIntEnMem(memoria,1793,(d+*topememoria-0x200)); // Carga en la posición 1793 el valor calculado.
+        // d: el ajuste obtenido leyendo dos valores del encabezado.
+        // topememoria: la posición alcanzada después de generar el código y, por lo tanto, el punto a partir del cuál el programa puede ubicar los datos de sus variables.
+        // 0x200: equivale a 512 en decimal. Se resta como parte de la conversión entre la posición que ocupan los datos dentro del archivo y la referencia de dirección que necesita el ejecutable.
+        
+        // Reserva y deja inicializados en cero los espacios para las variables.
+        for(i=0;i<posicionVar;i++){ // Recorre todas las variables.
+            CargarInt(memoria,topememoria,0); // Agrega cuatro bytes con valor cero al final de la memoria generada.
+            // Esto se hace por cada variable.
         }
-        CargarIntEnMem(memoria,416,*topememoria-0x200);
-        fileAligment=leerIntDeMem(memoria,220);
-        while(*topememoria%fileAligment!=0){
+
+        CargarIntEnMem(memoria,416,*topememoria-0x200); // Escribe un entero de cuatro bytes en la posición 416, sin cambiar el contador de memoria.
+        // Como 0x200 equivale a 512, se está guardando el contador actual menos 512.
+
+        fileAligment=leerIntDeMem(memoria,220); // Lee cuatro bytes desde la posición 220 y los interpreta como un entero.
+        // El valor se guarda en fileAligment, que luego se usa para calcular el relleno que debe agregarse al final del archivo.
+        while(*topememoria%fileAligment!=0){ // Este bucle agrega bytes cero hasta que topememoria sea divisible por fileAligment.
             CargarByte(memoria,topememoria,0x00);
-        }
-        CargarIntEnMem(memoria,188,*topememoria-0x200);
-        CargarIntEnMem(memoria,424,*topememoria-0x200);
+        } // Este relleno se conoce como padding: bytes que no necesariamente representan instrucciones nuevas, pero que se agregan para respetar la alineación requerida por el formato del archivo.
+
+        CargarIntEnMem(memoria,188,*topememoria-0x200); // En 188, se escribe topememoria - 512.
+        CargarIntEnMem(memoria,424,*topememoria-0x200); // En 424, se escribe topememoria - 512.
+        // Después lee esos campos.
         sizeOfCodeSection=leerIntDeMem(memoria,188);
         sizeOfRawData=leerIntDeMem(memoria,424);
-        sectionAligment=leerIntDeMem(memoria,216);
-        CargarIntEnMem(memoria,240,(2+sizeOfCodeSection/sectionAligment)*sectionAligment);
-        CargarIntEnMem(memoria,208,(2+sizeOfRawData/sectionAligment)*sectionAligment);
+        // Es decir, sizeOfCodeSection = sizeOfRawData.
+        sectionAligment=leerIntDeMem(memoria,216); // Lee cuatro bytes desde la posición 216 y los guarda en sectionAligment.
+        // A diferencia de fileAligment, que se utilizó para completar el tamaño del archivo.
+        // Este valor se usa en los dos cálculos siguientes para ajustar tamaños relacionados con la alineación de las secciones en memoria.
+        CargarIntEnMem(memoria,240,(2+sizeOfCodeSection/sectionAligment)*sectionAligment); // Escribe en la posición 240 el cálculo.
+        // Utiliza el tamaño que leyó del campo 188 y el valor de alineación leído de la posición 216.
+        // La división entre enteros descarta la parte decimal.
+        // Por eso la fórmula agrega dos unidades de alineación al cociente calculado.
+        CargarIntEnMem(memoria,208,(2+sizeOfRawData/sectionAligment)*sectionAligment); // Hace lo mismo.
+        // La diferencia es que esta vez utiliza sizeOfRawData y escribe en la posición 208.
+        // Estas dos operaciones ajustan campos de la plantilla ejecutable.
     }
-    else
+    else // Si no es punto, error.
         error (1,s.cadena);
-    return(s);
+    return(s); // Retorna s, si encontró el punto probablemente s sea FIN DE ARCHIVO.
 }
 
 tSimbolo bloque(tSimbolo s, FILE *arch, tablaDeIdent tabla, int base, byte memoria[], int *topememoria, int *posicionVar) {
-    int desplazamiento=0, p;
-    int origen;
-    ///Salto E9 00 00 00
-    CargarByte(memoria,topememoria,0xE9);
-    CargarInt(memoria,topememoria,0);
-    origen=*topememoria;
-    if (s.simbolo==CONSTANTE)
+    // Esta función procesa las declaraciones de constantes, variables y procedimientos.
+    // posicionVar cuenta cuántas variables se han asignado en el almacenamiento del programa (funciona como un índice).
+    // topememoria indica la próxima posición libre de memoria, el arreglo donde el compilador está construyendo los bytes del ejecutable.
+    // base indica la posición inicial de la zona de la tabla que utiliza el bloque.
+    int desplazamiento=0, p; // desplazamiento indica cuántas entradas nuevas se registraron dentro de este bloque.
+    // La siguiente entrada disponible se ubica en: base + desplazamiento.
+    // Y el rango ocupado hasta ese momento termina en: base + desplazamiento - 1.
+    
+    int origen; // Variable para volver a cargar el salto.
+    // Salto E9 00 00 00.
+    CargarByte(memoria,topememoria,0xE9); // Instrucción JMP.
+    CargarInt(memoria,topememoria,0); // Instrucción JMP 0.
+    origen=*topememoria; // Guarda en origen la posición donde fue escrito el 0.
+    
+    if (s.simbolo==CONSTANTE) // Si el símbolo es una constante.
     {
-        s=aLex(arch);
-        if (s.simbolo==IDENT)
+        s=aLex(arch); // Lee el siguiente token.
+        if (s.simbolo==IDENT) // Si es un identificador.
             {
-                p=buscarIdent(s.cadena, tabla, base, base+desplazamiento-1);
-                if (p==-1)
+                p=buscarIdent(s.cadena, tabla, base, base+desplazamiento-1); // Pasa la cadena, tabla, la pos inicial y la pos final.
+                // Como la pos inicial es base y la final base+desplazamiento-1, si desplazamiento vale 0, entonces el rango queda vacío.
+                if (p==-1) // Si devuelve -1 no encontró declaración previa.
                 {
-                    tabla[base+desplazamiento].tipo=CONSTANTE;
-                    strcpy(tabla[base+desplazamiento].nombre,s.cadena);
-                    uppercase(tabla[base+desplazamiento].nombre);
+                    tabla[base+desplazamiento].tipo=CONSTANTE; // En la siguiente entrada disponible de la tabla guarda el tipo de ident.
+                    strcpy(tabla[base+desplazamiento].nombre,s.cadena); // Guarda el nombre del ident.
+                    uppercase(tabla[base+desplazamiento].nombre); // Pasa a mayúsculas.
+                    // Nos falta el valor...
                 }
                 else
-                    error(14, s.cadena);
-                s=aLex(arch);
+                    error(14, s.cadena); // Si existe el identificador, error.
+                s=aLex(arch); // Sigue leyendo.
             }
-        else
-            error(2, s.cadena);
-        if (s.simbolo==IGUAL)
-            s=aLex(arch);
-        else
-            error(3, s.cadena);
-        if (s.simbolo==NUMERO)
+        else // Si no es un ident, error.
+            error(2, s.cadena); 
+        if (s.simbolo==IGUAL) // Luego del ident, espera un igual.
+            s=aLex(arch); // Sigue leyendo.
+        else // Si no es igual, error.
+            error(3, s.cadena); 
+        if (s.simbolo==NUMERO) // Luego del igual, espera un número.
         {
-            tabla[base+desplazamiento].valor=atoi(s.cadena);
-            desplazamiento++;
-            s=aLex(arch);
+            // ...en la siguiente entrada disponible de la tabla guarda el valor del número que leemos.
+            tabla[base+desplazamiento].valor=atoi(s.cadena); // La función atoi transforma la cadena en integer.
+            desplazamiento++; // Ahora que ya están completos todos los campos incrementa en uno el desplazamiento.
+            s=aLex(arch); // Sigue leyendo.
         }
-        else
-            error(4, s.cadena);
-        while (s.simbolo==COMA)
+        else // Si no es número, error.
+            error(4, s.cadena); 
+        while (s.simbolo==COMA) // Luego del número, podría haber una coma.
         {
+            // Se realiza exactamente el mismo procedimiento que antes.
             s=aLex(arch);
             if (s.simbolo==IDENT)
             {
@@ -480,33 +599,33 @@ tSimbolo bloque(tSimbolo s, FILE *arch, tablaDeIdent tabla, int base, byte memor
             }
             else
                 error(4, s.cadena);
-        }
-        if (s.simbolo==PTOCOMA)
-            s=aLex(arch);
-        else
-            error(5, s.cadena);
+        } // Si ya no hay mas comas que enumeran los ident de las constantes.
+        if (s.simbolo==PTOCOMA) // Espera punto y coma.
+            s=aLex(arch); // Sigue leyendo.
+        else // Si no hay punto y coma, error.
+            error(5, s.cadena); 
     }
-    if (s.simbolo==VAR)
+    if (s.simbolo==VAR) // Si es una variable.
     {
-        s=aLex(arch);
-        if (s.simbolo==IDENT)
+        s=aLex(arch); // Sigue leyendo.
+        if (s.simbolo==IDENT) // Espera un ident.
         {
-            p=buscarIdent(s.cadena, tabla, base, base+desplazamiento-1);
+            p=buscarIdent(s.cadena, tabla, base, base+desplazamiento-1); // Busca igual que antes.
                 if (p==-1)
                 {
-                    tabla[base+desplazamiento].tipo=VAR;
-                    tabla[base+desplazamiento].valor=(*posicionVar)++;    ///REVISAR
-                    strcpy(tabla[base+desplazamiento].nombre,s.cadena);
-                    uppercase(tabla[base+desplazamiento].nombre);
-                    desplazamiento++;
+                    tabla[base+desplazamiento].tipo=VAR; // En la siguiente entrada disponible de la tabla guarda el tipo de ident.
+                    tabla[base+desplazamiento].valor=(*posicionVar)++; // Guarda el valor actual de posicionVar y luego lo incrementa en uno.
+                    strcpy(tabla[base+desplazamiento].nombre,s.cadena); // Guarda el nombre del ident.
+                    uppercase(tabla[base+desplazamiento].nombre); // Lo pasa a mayúsculas.
+                    desplazamiento++; // Incrementa el desplazamiento.
                 }
-                else
-                    error(14, s.cadena);
-            s=aLex(arch);
+                else // Si ya existe esa variable, error.
+                    error(14, s.cadena); 
+            s=aLex(arch); // Sigue leyendo.
         }
-        else
-            error(2, s.cadena);
-        while (s.simbolo==COMA)
+        else // Si no hay ident, error.
+            error(2, s.cadena); 
+        while (s.simbolo==COMA) // Mientras haya coma repite todo el procedimiento.
         {
             s=aLex(arch);
             if (s.simbolo==IDENT)
@@ -525,135 +644,139 @@ tSimbolo bloque(tSimbolo s, FILE *arch, tablaDeIdent tabla, int base, byte memor
                 s=aLex(arch);
             }
             else
-                error(2, s.cadena); //E3 es falta de IDENT    //ERROR
+                error(2, s.cadena); // Si no hay ident error.
         }
-        if (s.simbolo==PTOCOMA)
-            s=aLex(arch);
-        else
-            error (5, s.cadena); //error 5 es falta de ;
+        if (s.simbolo==PTOCOMA) // Luego del ident de una o varias variables espera punto y coma.
+            s=aLex(arch); // Sigue leyendo.
+        else // Si no hay punto y coma, error.
+            error (5, s.cadena);
     }
-    while (s.simbolo==PROCEDURE)
+    while (s.simbolo==PROCEDURE) // Como puede haber varios procedimientos tenemos un bucle.
     {
-        s=aLex(arch);
-        if (s.simbolo==IDENT)
+        s=aLex(arch); // Sigue leyendo.
+        if (s.simbolo==IDENT) // Espera un ident.
         {
-            p=buscarIdent(s.cadena, tabla, base, base+desplazamiento-1);
+            p=buscarIdent(s.cadena, tabla, base, base+desplazamiento-1); // Busca que el ident no exista.
                 if (p==-1)
                 {
-                    tabla[base+desplazamiento].tipo=PROCEDURE;
-                    tabla[base+desplazamiento].valor=(*topememoria);
-                    strcpy(tabla[base+desplazamiento].nombre,s.cadena);
-                    uppercase(tabla[base+desplazamiento].nombre);
-                    desplazamiento++;
+                    tabla[base+desplazamiento].tipo=PROCEDURE; // Asigna que es un procedimiento.
+                    tabla[base+desplazamiento].valor=(*topememoria); // Guarda la posición de inicio de su código generado.
+                    strcpy(tabla[base+desplazamiento].nombre,s.cadena); // Asigna el nombre.
+                    uppercase(tabla[base+desplazamiento].nombre); // Lo pasa a mayúsculas.
+                    desplazamiento++; // Incrementa el desplazamiento.
                 }
-                else
-                    error(14, s.cadena);
-            s=aLex(arch);
+                else // Si ya existe el ident, error.
+                    error(14, s.cadena); 
+            s=aLex(arch); // Sigue leyendo.
         }
-        else
-            error(2, s.cadena);
-        if (s.simbolo==PTOCOMA)
-            s=aLex(arch);
-        else
+        else // Si no es un ident, error.
+            error(2, s.cadena); 
+        if (s.simbolo==PTOCOMA) // Depués del ident, espera punto y coma.
+            s=aLex(arch); // Sigue leyendo.
+        else // Si no es punto y coma, error.
             error(5, s.cadena);
-        s = bloque(s, arch, tabla, base+desplazamiento, memoria, &*topememoria, posicionVar);
-        CargarByte(memoria,topememoria,0xC3); ///RET
-        if (s.simbolo==PTOCOMA)
-            s=aLex(arch);
-        else
-            error(5, s.cadena);
+        // Dentro del procedure hay un bloque, llama a bloque recursivamente.
+        s = bloque(s, arch, tabla, base+desplazamiento, memoria, &*topememoria, posicionVar); // Pero ahora a la base le suma el desplazamiento ya realizado.
+        // Recordemos que al inicializar las variables de la función bloque desplazamiento volverá a iniciar en 0.
+        CargarByte(memoria,topememoria,0xC3); ///RET (return) le indica al procesador que debe regresar de una llamada a una función o procedimiento.
+        if (s.simbolo==PTOCOMA) // Después del bloque espera punto y coma para cerrar el procedimiento.
+            s=aLex(arch); // Sigue leyendo.
+        else // Si no hay punto y coma, error.
+            error(5, s.cadena); 
     }
-    CargarIntEnMem(memoria,origen-4,(*topememoria)-origen);
-    s = proposicion(s, arch, tabla, base+desplazamiento-1, memoria, topememoria);
-    return(s);
+    CargarIntEnMem(memoria,origen-4,(*topememoria)-origen); // Carga en origen - 4, donde estaban los ceros del JMP, la posición actual - origen.
+    s = proposicion(s, arch, tabla, base+desplazamiento-1, memoria, topememoria); // Llama a proposición.
+    return(s); // Retorna el simbolo que devuelve proposición.
 }
 
 tSimbolo proposicion(tSimbolo s, FILE *arch, tablaDeIdent tabla, int posUltimoIdent, byte memoria[], int *topememoria) {
     int p, d;
     int distanciaWrite, distanciaRead;
-    switch(s.simbolo)
+    switch(s.simbolo) 
     {
-    case IDENT:
-        p=buscarIdent(s.cadena, tabla, 0, posUltimoIdent);
-        if (p==-1)
+    case IDENT: // Si el símbolo es ident.
+        p=buscarIdent(s.cadena, tabla, 0, posUltimoIdent); // Llama a buscarIdent
+        if (p==-1) // Si no lo encuentra, error.
             error(15, s.cadena);
-        if (tabla[p].tipo!=VAR)
+        if (tabla[p].tipo!=VAR) // Si el tipo de ident no es var, error.
                 error(16, s.cadena);
-        s=aLex(arch);
-        printf("%s", s.cadena);
-        if (s.simbolo==ASIGNACION)
-            s=aLex(arch);
-        else
-            error(6, s.cadena);//E6 Falta de asignacion
-        s = expresion(s,arch, tabla, posUltimoIdent, memoria, topememoria);
-        cargarPopEAX(memoria,topememoria);
-        ///CargarByte(memoria,topememoria,0x58);
-        CargarByte(memoria,topememoria,0x89);///MOV [EDI+abcdefgh], EAX
+        s=aLex(arch); // Sigue leyendo.
+        if (s.simbolo==ASIGNACION) // Espera asignación.
+            s=aLex(arch); // Sigue leyendo.
+        else // Si no es asignación, error.
+            error(6, s.cadena);
+        s = expresion(s,arch, tabla, posUltimoIdent, memoria, topememoria); // Llama a expresión.
+        
+        cargarPopEAX(memoria,topememoria); // Instrucción POP EAX, extrae el valor de la pila y lo coloca en el operando.
+        // Equivale a CargarByte(memoria,topememoria,0x58);
+        
+        CargarByte(memoria,topememoria,0x89); // Instrucción MOV [EDI+abcdefgh], EAX.
         CargarByte(memoria,topememoria,0x87);
-        CargarInt(memoria,topememoria,4*tabla[p].valor);
+        CargarInt(memoria,topememoria,4*tabla[p].valor); // MOV [EDI+4*tabla[p].valor], EAX.
+        // Como era una variable, el valor es la posición de la variable.
         break;
-    case CALL:
-        s=aLex(arch);
-        if (s.simbolo==IDENT)
+    case CALL: // Si el símbolo es call.
+        s=aLex(arch); // Sigue leyendo.
+        if (s.simbolo==IDENT) // Espera un ident.
             {
-                p=buscarIdent(s.cadena, tabla, 0, posUltimoIdent);
-                if (p==-1)
+                p=buscarIdent(s.cadena, tabla, 0, posUltimoIdent); // Llama a buscar ident.
+                if (p==-1) // Si no lo encuentra, error.
                     error(15, s.cadena);
-                if (tabla[p].tipo!=PROCEDURE)
+                if (tabla[p].tipo!=PROCEDURE) // Si el tipo de ident no es procedure, error.
                         error(16, s.cadena);
-                distanciaWrite= tabla[p].valor -(*topememoria+5);
-                CargarByte(memoria,topememoria,0xE8);
-                CargarInt(memoria,topememoria,distanciaWrite);
-                s=aLex(arch);
+                
+                distanciaWrite= tabla[p].valor -(*topememoria+5); // Guarda en distanciaWrite la posición del procedure - (posición acutal + 5).
+                // Suma 5 por el CargarByte y el CargarInt.
+                CargarByte(memoria,topememoria,0xE8); // Instrucción CALL dir.
+                CargarInt(memoria,topememoria,distanciaWrite); // Paso la dirección del procedimiento - actual.
+                s=aLex(arch); // Sigue leyendo.
             }
-        else
+        else // Si no es un ident, error.
             error(2, s.cadena);
         break;
-    case BEGIN:
-        s=aLex(arch);
-        s = proposicion(s,arch, tabla, posUltimoIdent, memoria, topememoria);
-        while (s.simbolo==PTOCOMA)
+    case BEGIN: // Si el símbolo es begin.
+        s=aLex(arch); // Sigue leyendo.
+        s = proposicion(s,arch, tabla, posUltimoIdent, memoria, topememoria); // Llama a proposición recursivamente.
+        while (s.simbolo==PTOCOMA) // Mientras encuentre un punto y coma.
         {
-            s=aLex(arch);
-            s = proposicion(s, arch, tabla, posUltimoIdent, memoria, topememoria);
+            s=aLex(arch); // Sigue leyendo.
+            s = proposicion(s, arch, tabla, posUltimoIdent, memoria, topememoria); // Llama a proposición recursivamente.
         }
-        if (s.simbolo==END)
-            s=aLex(arch);
-        else
-            error(7,s.cadena);//E7: Falta END
+        if (s.simbolo==END) // Espera un end.
+            s=aLex(arch); // Sigue leyendo.
+        else // Si no es end, error.
+            error(7,s.cadena);
         break;
-    case IF:
-        s=aLex(arch);
-        s = condicion(s,arch, tabla, posUltimoIdent, memoria, topememoria);
-        int origen=*topememoria;
-        if (s.simbolo==THEN)
-            s=aLex(arch);
-        else
-            error(8,s.cadena); //E8 Falta THEN
-        s = proposicion(s,arch, tabla, posUltimoIdent, memoria, topememoria);
-        s=aLex(arch);
-        if (s.simbolo==ELSE){
-            s=aLex(arch);
-            s = proposicion(s,arch, tabla, posUltimoIdent, memoria, topememoria);
-        }   //ver como hacer que funcione solo si el IF no actua.
-        int distancia=*topememoria-origen;  //ver si hace falta corregir.
-        CargarIntEnMem(memoria,origen-4,distancia);
+    case IF: // Si el símbolo es if.
+        s=aLex(arch); // Sigue leyendo.
+        s = condicion(s,arch, tabla, posUltimoIdent, memoria, topememoria); // Llama a condición.
+        int origen=*topememoria; // Guarda en origen topememoria.
+        if (s.simbolo==THEN) // Espera un then.
+            s=aLex(arch); // Sigue leyendo.
+        else // Si no es then, error.
+            error(8,s.cadena);
+        s = proposicion(s,arch, tabla, posUltimoIdent, memoria, topememoria); // Llama a proposición recursivamente.
+        
+        int distancia=*topememoria-origen; // Guarda en distancia hasta donde llegó la proposicón - donde inicio.
+        CargarIntEnMem(memoria,origen-4,distancia); // Guarda en origen - 4, la distancia. 
         break;
-    case WHILE:
-        s=aLex(arch);
-        int inicioCiclo=*topememoria;
-        s = condicion(s,arch, tabla, posUltimoIdent, memoria, topememoria);
-        int origenCondicion=*topememoria;
-        if (s.simbolo==DO)
-            s=aLex(arch);
-        else
-            error(9,s.cadena); //E9 Falta THEN
-        s = proposicion(s,arch, tabla, posUltimoIdent, memoria, topememoria);
-        int dist=inicioCiclo-(*topememoria+5);
-        memoria[(*topememoria)++]=0xE9;
-        CargarInt(memoria,topememoria,dist);
-        dist=*topememoria-origenCondicion;
-        CargarIntEnMem(memoria,origenCondicion-4,dist);
+    case WHILE: // Si el símbolo es while.
+        s=aLex(arch); // Sigue leyendo.
+        int inicioCiclo=*topememoria; // Guarda en inicioCiclo topememoria.
+        s = condicion(s,arch, tabla, posUltimoIdent, memoria, topememoria); // Llama a condición.
+        int origenCondicion=*topememoria; // Guarda en origenCondición topememoria.
+        if (s.simbolo==DO) // Espera un do.
+            s=aLex(arch); // Sigue leyendo.
+        else // Si no es un do, error.
+            error(9,s.cadena);
+        s = proposicion(s,arch, tabla, posUltimoIdent, memoria, topememoria); // Llama a proposicón recursivamente.
+        
+        int dist=inicioCiclo-(*topememoria+5); // Guarda en dist el inicio del ciclo - posición acutal incluyendo la siguiente instrucción.
+        memoria[(*topememoria)++]=0xE9; // Instrucción JMP dir. 
+        //Equivale a llamar a CargarByte(memoria,topememoria,0xE9);
+        CargarInt(memoria,topememoria,dist); // JMP dist. Salta al inicio del ciclo.
+        dist=*topememoria-origenCondicion; // Guarda en dist, la posición actual - origen condición.
+        CargarIntEnMem(memoria,origenCondicion-4,dist); // Carga en el origen de condición la nueva distancia.
         break;
     case READLN:
         s=aLex(arch);
@@ -967,7 +1090,7 @@ tSimbolo termino(tSimbolo s, FILE *arch, tablaDeIdent tabla, int posUltimoIdent,
             memoria[(*topememoria)++]=0x5B;///POP EBX
             memoria[(*topememoria)++]=0x93;///XCHG EAX EBX
             memoria[(*topememoria)++]=0x99;///CDQ
-            memoria[(*topememoria)++]=0xF7;///IMUL EBX
+            // memoria[(*topememoria)++]=0xF7;///IMUL EBX no deberia ser div
             memoria[(*topememoria)++]=0xFB;
             memoria[(*topememoria)++]=0x50;///PUSH EAX
         }
@@ -1019,21 +1142,31 @@ tSimbolo factor(tSimbolo s, FILE *arch, tablaDeIdent tabla, int posUltimoIdent, 
 }
 
 int buscarIdent (char *id, tablaDeIdent tabla, int posPrimerIdent, int posUltimoIdent){
+    // Recibe un id (nombre del identificador), tabla (tabla de identificadores), posición del primero y posición del último.
     int j=0;
     char cadenaAux[MAX_LONGITUD_CADENA+3];
-    strcpy(cadenaAux,id);
-    uppercase(cadenaAux);
+    strcpy(cadenaAux,id); // El id recibido se copia a cadenaAux.
+    uppercase(cadenaAux); // Pasa cadenaAux a mayúsculas.
     int i=posUltimoIdent;
     printf("Se busca %s entre %d y %d\n",id,posUltimoIdent,posPrimerIdent);
-    for (j=0;j<=posUltimoIdent;j++){
+    for (j=0;j<=posUltimoIdent;j++){ // Se recorre desde 0 hasta la posición del último identificador en la tabla.
         printf("%s %d %d\n",tabla[j].nombre,tabla[j].tipo,tabla[j].valor);
     }
-    while ((i>=posPrimerIdent)&&(strcmp(cadenaAux,tabla[i].nombre)!=0))
+    // Este while recorre para atras mientras la posición del último sea mas grande que del primero y no conicida el nombre retrocede.
+    while ((i>=posPrimerIdent)&&(strcmp(cadenaAux,tabla[i].nombre)!=0)) 
         i--;
-    return (i>=posPrimerIdent?i:-1);
+    // Recorrer al revés importa cuando existen identificadores con el mismo nombre en bloques anidados: 
+    // La búsqueda puede encontrar primero la declaración más cercana.
+    return (i>=posPrimerIdent?i:-1); // La función devuelve un entero: la posición del identificador en la tabla, o -1 si no lo encuentra dentro del rango indicado.
+// Esta expresión utiliza el operador ternario. Es equivalente a escribir:
+// if (i >= posPrimerIdent)
+//     return i;
+// else
+//     return -1;
 }
 
 void inicializarMemoria (byte memoria[], int *topememoria){
+    // Esta función inicializa la memoria con el encabezado que figura en el apunte.
     int i=448;
     memoria[0] = 0x4D; // 'M' (Magic number)
     memoria[1] = 0x5A; // 'Z'
@@ -2770,11 +2903,18 @@ void inicializarMemoria (byte memoria[], int *topememoria){
     memoria[1788]=0x59;
     memoria[1789]=0x89;
     memoria[1790]=0xC8;
-    memoria[1791]=0xC3; //longitud fija de un programa 1792 bytes, el header de 448 y el resto de E/S
+    memoria[1791]=0xC3; // Longitud fija de un programa 1792 bytes, el header de 448 y el resto de E/S.
     *topememoria=1792;
 }
 
 void Crear(byte memoria[], int topememoria, char argv[]){
+    // Genera el archivo ejecutable a partir de los bytes acumulados en memoria.
+    // Busca un punto en el nombre del archivo.
+    // Si lo encuentra, reemplaza ese punto por el terminador '\0', eliminando la extensión desde allí.
+    // Agrega la extensión .exe.
+    // Abre el archivo en modo binario con fopen(argv, "wb").
+    // Recorre memoria desde 0 hasta topememoria - 1 y escribe cada byte mediante fwrite().
+    // Cierra el archivo.
     int index = -1;
     const char *ptr = strrchr(argv, '.');
     if(ptr) {
@@ -2797,28 +2937,36 @@ void Crear(byte memoria[], int topememoria, char argv[]){
 }
 
 void CargarInt (byte memoria[], int *topememoria, int n){
-    unsigned int num;
-    if (n<0){
-        num=4294967295U+n+1;
+    // Guarda un entero de cuatro bytes en memoria, empezando en la posición indicada por *topememoria. 
+    // Después avanza el contador cuatro posiciones.
+    // Carga desde el menos significativo hasta el más significativo (little-endian).
+    // Es el orden utilizado para representar los enteros en memoria en x86.
+    // El byte menos significativo es el que contiene la parte de menor valor.
+    // El más significativo es el que contiene la parte de mayor valor.
+    // Cada byte puede representar 256 valores diferentes: de 0 a 255.
+    unsigned int num; // num es una variable local que se utiliza para convertir el entero a una representación sin signo antes de separar sus bytes.
+    if (n<0){ // Si n es negativo, la función calcula una representación equivalente a complemento a dos de 32 bits.
+        num=4294967295U+n+1; // El valor 4294967295 es: 2^(32)-1. La letra U indica que el literal es de tipo entero sin signo.
     }
     else{
         num=n;
     }
-        memoria[(*topememoria)]=num%256;//printf("\n %d \t",memoria[*topememoria]);
-        (*topememoria)++;
-        memoria[(*topememoria)]=(num/256)%256;//printf(" %d \t",memoria[*topememoria]);
+        memoria[(*topememoria)]=num%256; // El módulo % 256 permite quedarse con el resto, que corresponde al byte que interesa extraer.
+        (*topememoria)++; // Incrementa topememoria. La próxima escritura se hará en la posición siguiente.
+        memoria[(*topememoria)]=(num/256)%256; // Divide el número por 256 para descartar el primer byte, y después usa % 256 para extraer el siguiente.
+        // Las divisiones son divisiones enteras: se descarta la parte decimal.
         (*topememoria)++;
         memoria[(*topememoria)]=(num/256/256)%256;//printf(" %d \t",memoria[*topememoria]);
         (*topememoria)++;
         memoria[(*topememoria)]=(num/256/256/256);//printf(" %d \t",memoria[*topememoria]);
         (*topememoria)++;
-}
-
-void CargarByte (byte memoria[], int *topememoria, byte n){
-    memoria[(*topememoria)++]=n;
+    // ¿Por qué no guardarlos al revés? Porque el código máquina que está generando debe respetar el orden de bytes esperado por la arquitectura y por las instrucciones x86 que se ejecutarán.
 }
 
 void CargarIntEnMem (byte memoria[], int dirMem, int n){
+    // Escribe un entero de cuatro bytes en una posición específica del arreglo, dirMem, pero no modifica topememoria.
+    // Utiliza la misma conversión a cuatro bytes que CargarInt(), pero la escritura comienza en la posición que recibe como argumento.
+    // Sirve para corregir un valor que ya se había escrito.
     unsigned int num;
     if (n<0){
         num=4294967295U+n+1;
@@ -2832,11 +2980,10 @@ void CargarIntEnMem (byte memoria[], int dirMem, int n){
         memoria[(dirMem++)]=(num/256/256/256);//printf(" %d \t",memoria[*topememoria]);
 }
 
-void CargarByteEnMem (byte memoria[], int dirMem, byte n){
-    memoria[dirMem]=n;
-}
-
 int leerIntDeMem (byte memoria[], int dirMem){
+    // No modifica topememoria, porque solamente lee.
+    // Lee cuatro bytes consecutivos desde dirMem y los combina para reconstruir un entero.
+    // Sirve para recuperar un entero que previamente fue almacenado en cuatro bytes.
     unsigned int entero=0;
     entero=entero+(memoria[dirMem++]);
     entero=entero+(256*memoria[dirMem++]);
@@ -2845,13 +2992,33 @@ int leerIntDeMem (byte memoria[], int dirMem){
     return(entero);
 }
 
+void CargarByte (byte memoria[], int *topememoria, byte n){
+    // La función sirve para escribir un byte en esa posición y avanzar el contador para dejar libre la siguiente posición.
+    // memoria es el arreglo donde se van guardando los bytes que forman el ejecutable que se está generando. 
+    // topememoria indica en qué posición de ese arreglo debe escribirse el próximo byte.
+    // byte memoria[]: recibe el arreglo donde se guardarán los bytes.
+    // int *topememoria: recibe un puntero al contador, para poder modificar el contador original.
+    // byte n: es el byte que queremos escribir.
+    memoria[(*topememoria)++]=n; // Escribe n en la posición actual y luego incrementa el contador.
+    // memoria [*topememoria]=n;
+    // (*topememoria)++;
+}
+
+void CargarByteEnMem (byte memoria[], int dirMem, byte n){
+    // Escribe un único byte en una posición específica.
+    // Sirve para reemplazar un byte concreto que ya se había generado, sin agregar otro al final del código.
+    memoria[dirMem]=n;
+}
+
+byte leerByte (byte memoria[], int topememoria){
+    // Devuelve el byte que se encuentra en la posición indicada.
+    return(memoria[topememoria]);
+}
+
 void cargarPopEAX (byte memoria[], int *topememoria){
+    // Decide si conviene eliminar un PUSH EAX recién generado o agregar una instrucción POP EAX.
     if(leerByte(memoria, (*topememoria)-1)==0x50)
         (*topememoria)--;
     else
         CargarByte(memoria,topememoria,0x58);
-}
-
-byte leerByte (byte memoria[], int topememoria){
-    return(memoria[topememoria]);
 }

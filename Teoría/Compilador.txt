@@ -1,3 +1,6 @@
+Buenas noches. Con el contexto de sistemas de computación I de la tecnicatura superior en informática aplicada del INSPT de la UTN, requiero de que analices el .zip adjunto, brindando un paso a paso detallado sobre el funcionamiento del 'compiBase.c' (compilador de PL-0) teniendo como principal fuente de información el PDF 'Compilador de PL-0 para Win32'. Espero confirmación antes de empezar a desmenuzar todo.
+Junto a eso, necesitaría que pienses en algunas preguntas tanto teóricas como practicas que podrían llegar a tener lugar en un parcial sobre dicho esquema de trabajo. Tenerlo en cuenta para cuando terminemos con el repaso.
+
 Compilador.
 	* El programa fuente está escrito en un pequeño lenguaje de programación 'PL/0'.
 	* Nuestro compilador  ||       ||     en C.
